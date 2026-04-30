@@ -247,49 +247,50 @@ kbd {
   -webkit-user-select: none;
 }
 
-#joystick-zone {
-  width: 150px;
-  height: 150px;
+#dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(3, 52px);
+  gap: 4px;
+}
+
+.dpad-center {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dpad-btn {
+  background: var(--player-color-dim, rgba(255, 255, 255, 0.08));
+  border: 2px solid var(--player-color-mid, rgba(255, 255, 255, 0.22));
+  border-radius: 12px;
+  color: var(--player-color, #e9ecf1);
+  font-size: 20px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
   touch-action: none;
+  transition: background 0.06s, border-color 0.06s, transform 0.06s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-#joystick-base {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#joystick-thumb {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  position: absolute;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  transition: transform 0.05s;
-}
-
-#joystick-thumb.active {
-  transition: none;
+.dpad-btn.pressed {
+  background: var(--player-color-mid, rgba(255, 255, 255, 0.25));
+  border-color: var(--player-color, rgba(255, 255, 255, 0.7));
+  transform: scale(0.92);
+  box-shadow: none;
 }
 
 #btn-bomb {
   width: 84px;
   height: 84px;
   border-radius: 50%;
-  background: #ff6b3d;
-  border: 3px solid rgba(255, 140, 90, 0.5);
+  background: var(--player-color, #ff6b3d);
+  border: 3px solid var(--player-color-mid, rgba(255, 140, 90, 0.5));
   font-size: 34px;
   line-height: 1;
   cursor: pointer;
@@ -299,13 +300,14 @@ kbd {
   padding: 0;
   margin: 0;
   touch-action: none;
-  box-shadow: 0 4px 16px rgba(255, 107, 61, 0.4);
-  transition: background 0.06s, box-shadow 0.06s;
+  box-shadow: 0 4px 20px var(--player-color-dim, rgba(255, 107, 61, 0.45));
+  transition: filter 0.06s, box-shadow 0.06s, transform 0.06s;
 }
 
 #btn-bomb.pressed {
-  background: #ff8c5a;
-  box-shadow: 0 2px 8px rgba(255, 107, 61, 0.6);
+  filter: brightness(1.25);
+  transform: scale(0.93);
+  box-shadow: 0 2px 8px var(--player-color-mid, rgba(255, 107, 61, 0.6));
 }
 
 @media (max-width: 768px) {
