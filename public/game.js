@@ -592,5 +592,57 @@
     ctx.textBaseline = 'alphabetic';
   }
 
+  // ----- Canvas sizing -----
+  function resizeCanvas() {
+    const LOGICAL_W = 600;
+    const LOGICAL_H = 520;
+    const isMobile = window.innerWidth <= 768;
+    const controlsH = isMobile ? 160 : 0;
+    const topH = isMobile ? 72 : 12;
+    const pad = 8;
+    const availW = window.innerWidth - pad * 2;
+    const availH = window.innerHeight - controlsH - topH - pad;
+    const scale = Math.min(availW / LOGICAL_W, availH / LOGICAL_H, 1);
+    canvas.style.width  = Math.floor(LOGICAL_W * scale) + 'px';
+    canvas.style.height = Math.floor(LOGICAL_H * scale) + 'px';
+  }
+
+  // ----- Mobile controls -----
+  function setupMobileControls() {
+    const dirMap = { 'btn-up': 'up', 'btn-down': 'down', 'btn-left': 'left', 'btn-right': 'right' };
+    for (const [id, dir] of Object.entries(dirMap)) {
+      const btn = document.getElementById(id);
+      if (!btn) continue;
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        btn.setPointerCapture(e.pointerId);
+        btn.classList.add('pressed');
+        setDir(dir, true);
+        sendInput();
+      });
+      const up = () => { btn.classList.remove('pressed'); setDir(dir, false); sendInput(); };
+      btn.addEventListener('pointerup', up);
+      btn.addEventListener('pointercancel', up);
+    }
+    const bombBtn = document.getElementById('btn-bomb');
+    if (!bombBtn) return;
+    bombBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      bombBtn.setPointerCapture(e.pointerId);
+      bombBtn.classList.add('pressed');
+      if (!bombHeld) { bombHeld = true; sendInput(); }
+    });
+    const releaseBomb = () => {
+      bombBtn.classList.remove('pressed');
+      if (bombHeld) { bombHeld = false; sendInput(); }
+    };
+    bombBtn.addEventListener('pointerup', releaseBomb);
+    bombBtn.addEventListener('pointercancel', releaseBomb);
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  setupMobileControls();
+
   draw();
 })();
