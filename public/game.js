@@ -1,5 +1,7 @@
 (() => {
   const TILE = 40;
+  const DEATH_ANIM_MS  = 900;
+  const OVERLAY_DELAY_MS = 1800;
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
@@ -26,6 +28,10 @@
   let joined = false;
   let ready = false;
   let lastState = null;
+  let showLabels = localStorage.getItem('bomberman_labels') !== 'false';
+  const playerDeathTimes = new Map();
+  let prevDrawPhase = null;
+  let phaseEndedAt = null;
 
   // ----- WebSocket -----
   const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -139,6 +145,7 @@
   function updateUI(s) {
     updateControlsColor(s);
     if (s.phase === 'lobby') {
+      phaseEndedAt = null;
       overlay.style.display = 'flex';
       lobby.classList.remove('hidden');
       endScreen.classList.add('hidden');
@@ -195,23 +202,25 @@
       hud.classList.remove('hidden');
       renderHud(s);
     } else if (s.phase === 'ended') {
-      overlay.style.display = 'flex';
-      lobby.classList.add('hidden');
-      endScreen.classList.remove('hidden');
+      if (!phaseEndedAt) phaseEndedAt = Date.now();
       hud.classList.remove('hidden');
       renderHud(s);
-      const winner = s.players.find(p => p.id === s.winnerId);
-      if (winner) {
-        endText.textContent = winner.id === myId ? '🏆 You win!' : `🏆 ${winner.name} wins!`;
+      if (Date.now() - phaseEndedAt >= OVERLAY_DELAY_MS) {
+        overlay.style.display = 'flex';
+        lobby.classList.add('hidden');
+        endScreen.classList.remove('hidden');
+        const winner = s.players.find(p => p.id === s.winnerId);
+        if (winner) {
+          endText.textContent = winner.id === myId ? '🏆 You win!' : `🏆 ${winner.name} wins!`;
+        } else {
+          endText.textContent = '💀 Draw — everyone exploded.';
+        }
+        endCountdown.textContent = `Returning to lobby in ${Math.ceil(s.endTimer)}s...`;
+        if (ready) { ready = false; readyBtn.textContent = 'Ready'; }
       } else {
-        endText.textContent = '💀 Draw — everyone exploded.';
-      }
-      endCountdown.textContent = `Returning to lobby in ${Math.ceil(s.endTimer)}s...`;
-
-      // Reset ready state for next round
-      if (ready) {
-        ready = false;
-        readyBtn.textContent = 'Ready';
+        overlay.style.display = 'none';
+        endScreen.classList.add('hidden');
+        lobby.classList.add('hidden');
       }
     }
   }
@@ -235,11 +244,24 @@
     const me = s.players.find(p => p.id === myId);
     if (me) {
       statsHud.innerHTML = `
-        <div class="hud-stats">
-          <span>💣 ${me.maxBombs}</span>
-          <span>🔥 ${me.range}</span>
-          <span>👟 ${formatSpeed(me.speed)}</span>
-          <span class="kick ${me.canKick ? 'active' : 'inactive'}" title="${me.canKick ? 'Kick acquired' : 'Kick not acquired'}">🥾</span>
+        <div class="hud-stats${showLabels ? '' : ' labels-hidden'}">
+          <div class="stat-item">
+            <span>💣 ${me.maxBombs}</span>
+            <span class="stat-label">extra bomb</span>
+          </div>
+          <div class="stat-item">
+            <span>🔥 ${me.range}</span>
+            <span class="stat-label">wider blast</span>
+          </div>
+          <div class="stat-item">
+            <span>👟 ${formatSpeed(me.speed)}</span>
+            <span class="stat-label">move faster</span>
+          </div>
+          <div class="stat-item kick ${me.canKick ? 'active' : 'inactive'}">
+            <span>🥾</span>
+            <span class="stat-label">${me.canKick ? 'shove bombs' : 'no kick'}</span>
+          </div>
+          <button class="stat-toggle" title="Toggle labels">${showLabels ? '×' : 'ℹ'}</button>
         </div>
       `;
     } else {
@@ -281,6 +303,11 @@
       }
     }
 
+    // Tombstones (drawn after tiles, before powerups and players)
+    if (s.tombstones) {
+      for (const ts of s.tombstones) drawTombstone(ts.x * TILE, ts.y * TILE, ts.color);
+    }
+
     // Power-ups
     for (const pu of s.powerups) {
       drawPowerup(pu.x * TILE, pu.y * TILE, pu.type);
@@ -292,18 +319,40 @@
     }
 
     // Players (sort by y so lower ones overlap)
+    const nowMs = performance.now();
+
+    if (s.phase === 'playing' && prevDrawPhase !== 'playing') playerDeathTimes.clear();
+    prevDrawPhase = s.phase;
+
+    for (const p of s.players) {
+      if (!p.alive && !playerDeathTimes.has(p.id)) {
+        playerDeathTimes.set(p.id, nowMs);
+        if (p.id === myId) triggerDeathFlash();
+      }
+    }
+
     const sorted = [...s.players].sort((a, b) => a.y - b.y);
     for (const p of sorted) {
-      if (!p.alive && s.phase === 'playing') {
-        drawGhost(p.x * TILE, p.y * TILE, p.color, p.name);
-      } else if (p.alive) {
+      const deathTime = playerDeathTimes.get(p.id);
+      const animT = deathTime ? (nowMs - deathTime) / DEATH_ANIM_MS : 1;
+      if (p.alive) {
         drawCharacter(p.x * TILE, p.y * TILE, p.color, p.name, p.facing || 'down', !!p.moving, p.id === myId);
+      } else if (animT < 1) {
+        drawDeathAnimation(p, animT);
+      } else if (s.phase === 'playing') {
+        drawGhost(p.x * TILE, p.y * TILE, p.color, p.name);
       }
     }
 
     // Explosions on top
+    // Server stops ticking explosions when phase becomes 'ended', so continue
+    // fading them on the client using elapsed time since the phase transition.
+    const explosionOffset = s.phase === 'ended' && phaseEndedAt
+      ? (Date.now() - phaseEndedAt) / 1000
+      : 0;
     for (const e of s.explosions) {
-      drawExplosion(e);
+      const life = e.life - explosionOffset;
+      if (life > 0) drawExplosion({ ...e, life });
     }
   }
 
@@ -547,6 +596,68 @@
     ctx.closePath();
   }
 
+  function drawTombstone(px, py, color) {
+    const cx = px + TILE / 2;
+    const w  = TILE * 0.64;
+    const h  = TILE * 0.76;
+    const left   = cx - w / 2;
+    const right  = cx + w / 2;
+    const bottom = py + TILE * 0.86;
+    const top    = bottom - h;
+    const archR  = w / 2;
+    const archMidY = top + archR;
+
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 2, bottom + 2, w * 0.46, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stone shape — flat bottom, arched top
+    ctx.beginPath();
+    ctx.moveTo(left, bottom);
+    ctx.lineTo(left, archMidY);
+    ctx.arcTo(left, top, cx, top, archR);
+    ctx.arcTo(right, top, right, archMidY, archR);
+    ctx.lineTo(right, bottom);
+    ctx.closePath();
+
+    ctx.fillStyle = '#8d95a8';
+    ctx.fill();
+
+    // Player-color tint
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.2;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Outline
+    ctx.strokeStyle = '#555d70';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Left-edge highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(left + 2, bottom - 2);
+    ctx.lineTo(left + 2, archMidY);
+    ctx.arcTo(left + 2, top + 2, cx, top + 2, archR - 2);
+    ctx.stroke();
+
+    // Cross
+    const crossCy = archMidY + (bottom - archMidY) * 0.28;
+    ctx.fillStyle = '#555d70';
+    ctx.fillRect(cx - 1.5, crossCy - 8, 3, 13);
+    ctx.fillRect(cx - 6,   crossCy - 3, 12, 3);
+
+    // "RIP" label
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#555d70';
+    ctx.fillText('RIP', cx, crossCy + 10);
+  }
+
   function drawGhost(tx, ty, color, name) {
     const cx = tx + TILE / 2;
     const cy = ty + TILE / 2;
@@ -656,9 +767,81 @@
     bombBtn.addEventListener('pointercancel', releaseBomb);
   }
 
+  // Toggle stat labels on/off
+  statsHud.addEventListener('click', (e) => {
+    if (!e.target.closest('.stat-toggle')) return;
+    showLabels = !showLabels;
+    localStorage.setItem('bomberman_labels', showLabels);
+  });
+
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   setupMobileControls();
+
+  function triggerDeathFlash() {
+    const el = document.getElementById('death-flash');
+    if (!el) return;
+    el.classList.remove('active');
+    void el.offsetWidth;
+    el.classList.add('active');
+  }
+
+  function drawDeathAnimation(p, t) {
+    const cx = p.x * TILE + TILE / 2;
+    const cy = p.y * TILE + TILE / 2;
+
+    // Outward particles (first half of animation)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const dist = t * TILE * 1.3;
+      ctx.globalAlpha = Math.max(0, (1 - t * 2.2) * 0.9);
+      ctx.fillStyle = i % 2 === 0 ? p.color : '#fff8b0';
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, 3.5 * (1 - t) + 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Spinning + shrinking character
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(t * Math.PI * 3.5);
+    ctx.scale(1 - t, 1 - t);
+    ctx.globalAlpha = Math.max(0, 1 - t * 1.4);
+
+    // Body
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(0, 3, TILE * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = '#f4d2a3';
+    ctx.beginPath();
+    ctx.arc(0, -TILE * 0.16, TILE * 0.155, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // X eyes
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    for (const ex of [-3.5, 3.5]) {
+      const ey = -TILE * 0.16 + 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ex - 2.2, ey - 2.2); ctx.lineTo(ex + 2.2, ey + 2.2);
+      ctx.moveTo(ex + 2.2, ey - 2.2); ctx.lineTo(ex - 2.2, ey + 2.2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
 
   draw();
 })();

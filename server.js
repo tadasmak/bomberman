@@ -14,6 +14,7 @@ const ROWS = 13;
 const TILE_EMPTY = 0;
 const TILE_WALL = 1;        // indestructible
 const TILE_BRICK = 2;       // destructible
+const TILE_TOMBSTONE = 3;   // indestructible, placed on player death
 
 const BOMB_FUSE = 2.5;                  // seconds
 const EXPLOSION_DURATION = 0.35;        // total visual lifetime (seconds)
@@ -61,6 +62,7 @@ const state = {
   bombs: [],              // {id, ownerId, x, y, fuse, range}
   explosions: [],         // {tiles:[{x,y}], life}
   powerups: [],           // {x,y,type}
+  tombstones: [],         // {x,y,color}
   winnerId: null,
   endTimer: 0,
 };
@@ -114,6 +116,7 @@ function startGame() {
   state.bombs = [];
   state.explosions = [];
   state.powerups = [];
+  state.tombstones = [];
   state.winnerId = null;
   state.endTimer = 0;
   state.phase = 'playing';
@@ -161,7 +164,7 @@ const DIR_DELTAS = {
 function canStepTo(p, nx, ny) {
   if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) return false;
   const t = state.map[ny][nx];
-  if (t === TILE_WALL || t === TILE_BRICK) return false;
+  if (t === TILE_WALL || t === TILE_BRICK || t === TILE_TOMBSTONE) return false;
   // Bombs block movement (except the tile we're already standing on, which
   // we'll never re-enter as a destination since we move tile-by-tile away)
   if (state.bombs.some(b => b.tileX === nx && b.tileY === ny)) return false;
@@ -171,7 +174,7 @@ function canStepTo(p, nx, ny) {
 function canBombSlideTo(bomb, nx, ny) {
   if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) return false;
   const t = state.map[ny][nx];
-  if (t === TILE_WALL || t === TILE_BRICK) return false;
+  if (t === TILE_WALL || t === TILE_BRICK || t === TILE_TOMBSTONE) return false;
   // Other bombs block
   if (state.bombs.some(b => b !== bomb && b.tileX === nx && b.tileY === ny)) return false;
   // Players block (use their logical tile — round of visual position)
@@ -329,7 +332,7 @@ function explodeBomb(bomb, processedIds) {
       const ty = oy + dy * i;
       if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) break;
       const t = state.map[ty][tx];
-      if (t === TILE_WALL) break;
+      if (t === TILE_WALL || t === TILE_TOMBSTONE) break;
       tiles.push({ x: tx, y: ty });
       if (t === TILE_BRICK) {
         state.map[ty][tx] = TILE_EMPTY;
@@ -417,6 +420,11 @@ function tick(dt) {
           if (ex.tiles.some(t => t.x === tx && t.y === ty)) {
             p.alive = false;
             p.deathTime = Date.now();
+            if (state.map[ty][tx] === TILE_EMPTY) {
+              state.map[ty][tx] = TILE_TOMBSTONE;
+              state.tombstones.push({ x: tx, y: ty, color: p.color });
+              state.powerups = state.powerups.filter(pu => !(pu.x === tx && pu.y === ty));
+            }
           }
         }
         ex.lethal -= dt;
@@ -440,6 +448,7 @@ function tick(dt) {
       state.bombs = [];
       state.explosions = [];
       state.powerups = [];
+      state.tombstones = [];
       state.map = makeEmptyMap();
       state.winnerId = null;
       for (const p of state.players.values()) {
@@ -479,6 +488,7 @@ function snapshot() {
     bombs: state.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, fuse: b.fuse })),
     explosions: state.explosions.map(e => ({ tiles: e.tiles, life: e.life })),
     powerups: state.powerups,
+    tombstones: state.tombstones,
     winnerId: state.winnerId,
     endTimer: state.endTimer,
   };
