@@ -611,7 +611,7 @@
   function setupMobileControls() {
     const zone  = document.getElementById('joystick-zone');
     const thumb = document.getElementById('joystick-thumb');
-    const DEAD = 14;   // px — inner dead zone, no direction registered
+    const DEAD = 28;   // px — inner dead zone, no direction registered
     const MAX  = 42;   // px — thumb travel clamp radius
     let activeId = null;
     let originX = 0, originY = 0;
