@@ -597,7 +597,7 @@
     const LOGICAL_W = 600;
     const LOGICAL_H = 520;
     const isMobile = window.innerWidth <= 768;
-    const controlsH = isMobile ? 160 : 0;
+    const controlsH = isMobile ? 190 : 0;
     const topH = isMobile ? 72 : 12;
     const pad = 8;
     const availW = window.innerWidth - pad * 2;
@@ -609,21 +609,66 @@
 
   // ----- Mobile controls -----
   function setupMobileControls() {
-    const dirMap = { 'btn-up': 'up', 'btn-down': 'down', 'btn-left': 'left', 'btn-right': 'right' };
-    for (const [id, dir] of Object.entries(dirMap)) {
-      const btn = document.getElementById(id);
-      if (!btn) continue;
-      btn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        btn.setPointerCapture(e.pointerId);
-        btn.classList.add('pressed');
-        setDir(dir, true);
-        sendInput();
-      });
-      const up = () => { btn.classList.remove('pressed'); setDir(dir, false); sendInput(); };
-      btn.addEventListener('pointerup', up);
-      btn.addEventListener('pointercancel', up);
+    const zone  = document.getElementById('joystick-zone');
+    const thumb = document.getElementById('joystick-thumb');
+    const DEAD = 14;   // px — inner dead zone, no direction registered
+    const MAX  = 42;   // px — thumb travel clamp radius
+    let activeId = null;
+    let originX = 0, originY = 0;
+    let joystickDir = null;
+
+    function applyDir(newDir) {
+      if (newDir === joystickDir) return;
+      if (joystickDir) setDir(joystickDir, false);
+      joystickDir = newDir;
+      if (joystickDir) setDir(joystickDir, true);
+      sendInput();
     }
+
+    function angleToDir(dx, dy) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < DEAD) return null;
+      const a = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (a > -135 && a <= -45) return 'up';
+      if (a > -45  && a <=  45) return 'right';
+      if (a >  45  && a <= 135) return 'down';
+      return 'left';
+    }
+
+    if (zone) {
+      zone.addEventListener('pointerdown', (e) => {
+        if (activeId !== null) return;
+        e.preventDefault();
+        zone.setPointerCapture(e.pointerId);
+        activeId = e.pointerId;
+        const base = document.getElementById('joystick-base').getBoundingClientRect();
+        originX = base.left + base.width  / 2;
+        originY = base.top  + base.height / 2;
+        thumb.classList.add('active');
+      });
+
+      zone.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== activeId) return;
+        const dx = e.clientX - originX;
+        const dy = e.clientY - originY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const clamp = Math.min(dist, MAX);
+        const angle = Math.atan2(dy, dx);
+        thumb.style.transform = `translate(${Math.cos(angle) * clamp}px, ${Math.sin(angle) * clamp}px)`;
+        applyDir(angleToDir(dx, dy));
+      });
+
+      const releaseJoystick = (e) => {
+        if (e.pointerId !== activeId) return;
+        activeId = null;
+        thumb.classList.remove('active');
+        thumb.style.transform = 'translate(0, 0)';
+        applyDir(null);
+      };
+      zone.addEventListener('pointerup', releaseJoystick);
+      zone.addEventListener('pointercancel', releaseJoystick);
+    }
+
     const bombBtn = document.getElementById('btn-bomb');
     if (!bombBtn) return;
     bombBtn.addEventListener('pointerdown', (e) => {
