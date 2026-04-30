@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bomberman LAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="overlay">
+    <div id="lobby" class="panel">
+      <h1>💣 Bomberman LAN</h1>
+      <p class="subtitle">Last bomber standing wins.</p>
+
+      <label>Your name</label>
+      <input id="nameInput" maxlength="16" placeholder="Enter your nickname" />
+
+      <button id="joinBtn">Join Game</button>
+
+      <div id="lobbyList"></div>
+
+      <button id="readyBtn" class="hidden">Ready</button>
+      <button id="startBtn" class="hidden">Start Game</button>
+      <button id="soloBtn" class="hidden secondary">Solo Practice</button>
+      <p id="lobbyMsg" class="muted"></p>
+
+      <div class="controls">
+        <strong>Controls:</strong>
+        <span><kbd>WASD</kbd> / <kbd>Arrows</kbd> move</span>
+        <span><kbd>Space</kbd> place bomb</span>
+      </div>
+    </div>
+
+    <div id="endScreen" class="panel hidden">
+      <h2 id="endText">—</h2>
+      <p id="endCountdown" class="muted"></p>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="winsHud"></div>
+    <div id="statsHud"></div>
+  </div>
+
+  <canvas id="game" width="600" height="520"></canvas>
+
+  <script src="game.js"></script>
+</body>
+</html>

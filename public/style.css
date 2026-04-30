@@ -1,0 +1,229 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #1a1d24;
+  color: #e9ecf1;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#game {
+  background: #2a2f3a;
+  border: 4px solid #0a0c10;
+  border-radius: 6px;
+  display: block;
+  image-rendering: pixelated;
+  box-shadow: 0 6px 30px rgba(0,0,0,.5);
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 22, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.panel {
+  background: #232733;
+  border: 1px solid #3a4051;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: min(420px, 90vw);
+  text-align: center;
+  pointer-events: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+}
+
+.panel.hidden { display: none; }
+.hidden { display: none !important; }
+
+h1 { margin: 0 0 4px; font-size: 28px; }
+h2 { margin: 0 0 12px; }
+.subtitle { margin: 0 0 18px; color: #99a2b6; }
+
+label {
+  display: block;
+  text-align: left;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  color: #99a2b6;
+}
+
+input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #1a1d24;
+  border: 1px solid #3a4051;
+  border-radius: 6px;
+  color: #e9ecf1;
+  font-size: 15px;
+  outline: none;
+}
+input:focus { border-color: #6c8aff; }
+
+button {
+  margin-top: 14px;
+  padding: 10px 18px;
+  width: 100%;
+  background: #ff6b3d;
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter .15s ease;
+}
+button:hover { filter: brightness(1.1); }
+button:disabled {
+  background: #3a4051;
+  color: #6c7591;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: transparent;
+  border: 1px solid #3a4051;
+  color: #c5cbdc;
+  margin-top: 8px;
+}
+button.secondary:hover { background: #2a2f3a; filter: none; }
+
+#lobbyList {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lobby-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #1a1d24;
+  border-radius: 6px;
+  border: 1px solid #3a4051;
+}
+.lobby-row .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.lobby-row .ready { color: #7be86b; font-size: 13px; }
+.lobby-row .waiting { color: #99a2b6; font-size: 13px; }
+.lobby-row .host-tag { color: #ffd84d; font-size: 13px; }
+
+.host-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  background: rgba(255, 216, 77, 0.15);
+  border: 1px solid #ffd84d;
+  color: #ffd84d;
+  border-radius: 3px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+.muted { color: #99a2b6; font-size: 13px; margin-top: 12px; }
+
+.controls {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid #3a4051;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #99a2b6;
+  align-items: flex-start;
+  text-align: left;
+}
+.controls span { color: #c5cbdc; }
+
+kbd {
+  background: #0f1116;
+  border: 1px solid #3a4051;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: 'SF Mono', Menlo, monospace;
+  color: #e9ecf1;
+}
+
+#hud {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  z-index: 5;
+}
+
+#winsHud, #statsHud {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hud-player {
+  background: #232733;
+  border: 1px solid #3a4051;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hud-player .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.hud-player.dead { opacity: 0.4; text-decoration: line-through; }
+.hud-player .wins { color: #ffd84d; font-weight: 600; font-size: 12px; }
+
+.hud-stats {
+  background: #232733;
+  border: 1px solid #3a4051;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #c5cbdc;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.hud-stats .kick.inactive {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
