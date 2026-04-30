@@ -235,8 +235,8 @@ kbd {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 190px;
-  padding: 12px 32px;
+  height: 230px;
+  padding: 16px 32px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   background: rgba(10, 12, 16, 0.82);
   border-top: 1px solid #2a2f3a;
@@ -249,8 +249,8 @@ kbd {
 
 #dpad {
   display: grid;
-  grid-template-columns: repeat(3, 52px);
-  grid-template-rows: repeat(3, 52px);
+  grid-template-columns: repeat(3, 62px);
+  grid-template-rows: repeat(3, 62px);
   gap: 4px;
 }
 
@@ -313,7 +313,7 @@ kbd {
 @media (max-width: 768px) {
   body {
     padding-top: 72px;
-    padding-bottom: 190px;
+    padding-bottom: 230px;
     gap: 0;
   }
 

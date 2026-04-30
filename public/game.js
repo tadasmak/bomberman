@@ -598,7 +598,7 @@
     const LOGICAL_W = 600;
     const LOGICAL_H = 520;
     const isMobile = window.innerWidth <= 768;
-    const controlsH = isMobile ? 190 : 0;
+    const controlsH = isMobile ? 230 : 0;
     const topH = isMobile ? 72 : 12;
     const pad = 8;
     const availW = window.innerWidth - pad * 2;
