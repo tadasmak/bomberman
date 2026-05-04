@@ -27,6 +27,7 @@
   let myId = null;
   let joined = false;
   let ready = false;
+  let kickedReason = null;
   let lastState = null;
   let showLabels = localStorage.getItem('bomberman_labels') !== 'false';
   const playerDeathTimes = new Map();
@@ -41,7 +42,15 @@
     lobbyMsg.textContent = 'Connected. Pick a name and join.';
   });
   ws.addEventListener('close', () => {
-    lobbyMsg.textContent = 'Disconnected. Refresh to reconnect.';
+    lobbyMsg.textContent = kickedReason
+      ? `${kickedReason} Refresh to rejoin.`
+      : 'Disconnected. Refresh to reconnect.';
+    if (kickedReason) {
+      overlay.style.display = 'flex';
+      lobby.classList.remove('hidden');
+      endScreen.classList.add('hidden');
+      hud.classList.add('hidden');
+    }
   });
   ws.addEventListener('error', () => {
     lobbyMsg.textContent = 'Connection error.';
@@ -55,6 +64,9 @@
       updateUI(msg);
     } else if (msg.type === 'error') {
       lobbyMsg.textContent = msg.error;
+    } else if (msg.type === 'kicked') {
+      kickedReason = msg.reason || 'You were kicked.';
+      lobbyMsg.textContent = kickedReason;
     }
   });
 
@@ -85,6 +97,14 @@
 
   soloBtn.addEventListener('click', () => {
     send({ type: 'start_solo' });
+  });
+
+  lobbyList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.kick-btn');
+    if (!btn) return;
+    const targetId = Number(btn.dataset.kickId);
+    if (!Number.isInteger(targetId)) return;
+    send({ type: 'kick', targetId });
   });
 
   // ----- Input -----
@@ -161,13 +181,19 @@
         const statusHtml = isThisHost
           ? '<span class="host-tag">👑 Host</span>'
           : `<span class="${p.ready ? 'ready' : 'waiting'}">${p.ready ? '✓ Ready' : 'Waiting...'}</span>`;
+        const kickHtml = (isHost && p.id !== myId)
+          ? `<button class="kick-btn" data-kick-id="${p.id}" title="Kick player">×</button>`
+          : '';
         row.innerHTML = `
           <span>
             <span class="dot" style="background:${p.color}"></span>
             ${escapeHtml(p.name)}${p.id === myId ? ' (you)' : ''}
             ${isThisHost ? '<em class="host-badge">host</em>' : ''}
           </span>
-          ${statusHtml}
+          <span class="lobby-row-right">
+            ${statusHtml}
+            ${kickHtml}
+          </span>
         `;
         lobbyList.appendChild(row);
       }

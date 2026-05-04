@@ -589,6 +589,18 @@ wss.on('connection', (ws) => {
       const p = state.players.get(id);
       if (!p) return;
       p.name = String(msg.name || p.name).slice(0, 16);
+    } else if (msg.type === 'kick') {
+      if (id !== state.hostId) return;
+      const targetId = Number(msg.targetId);
+      if (!Number.isInteger(targetId)) return;
+      if (targetId === state.hostId) return;
+      if (!state.players.has(targetId)) return;
+      for (const client of wss.clients) {
+        if (client.playerId !== targetId) continue;
+        send(client, { type: 'kicked', reason: 'You were kicked by the host.' });
+        client.close();
+        break;
+      }
     }
   });
 

@@ -133,6 +133,35 @@ button.secondary:hover { background: #2a2f3a; filter: none; }
 .lobby-row .waiting { color: #99a2b6; font-size: 13px; }
 .lobby-row .host-tag { color: #ffd84d; font-size: 13px; }
 
+.lobby-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kick-btn {
+  margin: 0;
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid #6c2a2a;
+  color: #d97070;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.kick-btn:hover {
+  background: #6c2a2a;
+  color: #fff;
+  filter: none;
+}
+
 .host-badge {
   display: inline-block;
   margin-left: 6px;
