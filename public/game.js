@@ -137,6 +137,11 @@
   document.addEventListener('keydown', (e) => {
     if (!joined) return;
     if (e.repeat) return;
+    if ((e.code === 'Enter' || e.code === 'Space') && !readyBtn.classList.contains('hidden')) {
+      e.preventDefault();
+      readyBtn.click();
+      return;
+    }
     if (DIR_FOR_CODE[e.code]) {
       e.preventDefault();
       setDir(DIR_FOR_CODE[e.code], true);
