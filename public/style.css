@@ -162,6 +162,14 @@ button.secondary:hover { background: #2a2f3a; filter: none; }
   filter: none;
 }
 
+#kickedModal h2 {
+  color: #ff8a8a;
+  margin-bottom: 8px;
+}
+#kickedModal #kickedReason {
+  margin: 0 0 8px;
+}
+
 .host-badge {
   display: inline-block;
   margin-left: 6px;

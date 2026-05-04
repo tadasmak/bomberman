@@ -616,12 +616,25 @@ wss.on('connection', (ws) => {
       if (!Number.isInteger(targetId)) return;
       if (targetId === state.hostId) return;
       if (!state.players.has(targetId)) return;
+      // Remove immediately so the next broadcast (and the host's UI) reflects
+      // the kick without waiting for the WS close handshake. The on('close')
+      // handler's delete is idempotent.
+      state.players.delete(targetId);
+      if (state.phase === 'playing') {
+        const alive = [...state.players.values()].filter(p => p.alive);
+        if (state.players.size === 0) {
+          state.phase = 'lobby';
+        } else if (alive.length <= 1 && state.players.size >= 1) {
+          endGame(alive.length === 1 ? alive[0].id : null);
+        }
+      }
       for (const client of wss.clients) {
         if (client.playerId !== targetId) continue;
         send(client, { type: 'kicked', reason: 'You were kicked by the host.' });
         client.close();
         break;
       }
+      broadcast(snapshot());
     }
   });
 

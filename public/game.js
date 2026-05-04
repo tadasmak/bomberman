@@ -17,6 +17,9 @@
   const endScreen = document.getElementById('endScreen');
   const endText = document.getElementById('endText');
   const endCountdown = document.getElementById('endCountdown');
+  const kickedModal = document.getElementById('kickedModal');
+  const kickedReasonEl = document.getElementById('kickedReason');
+  const kickedRefreshBtn = document.getElementById('kickedRefreshBtn');
   const hud = document.getElementById('hud');
   const winsHud = document.getElementById('winsHud');
   const statsHud = document.getElementById('statsHud');
@@ -42,14 +45,10 @@
     lobbyMsg.textContent = 'Connected. Pick a name and join.';
   });
   ws.addEventListener('close', () => {
-    lobbyMsg.textContent = kickedReason
-      ? `${kickedReason} Refresh to rejoin.`
-      : 'Disconnected. Refresh to reconnect.';
     if (kickedReason) {
-      overlay.style.display = 'flex';
-      lobby.classList.remove('hidden');
-      endScreen.classList.add('hidden');
-      hud.classList.add('hidden');
+      showKickedModal(kickedReason);
+    } else {
+      lobbyMsg.textContent = 'Disconnected. Refresh to reconnect.';
     }
   });
   ws.addEventListener('error', () => {
@@ -60,13 +59,14 @@
     if (msg.type === 'welcome') {
       myId = msg.id;
     } else if (msg.type === 'state') {
+      if (kickedReason) return;
       lastState = msg;
       updateUI(msg);
     } else if (msg.type === 'error') {
       lobbyMsg.textContent = msg.error;
     } else if (msg.type === 'kicked') {
       kickedReason = msg.reason || 'You were kicked.';
-      lobbyMsg.textContent = kickedReason;
+      showKickedModal(kickedReason);
     }
   });
 
@@ -106,6 +106,17 @@
     if (!Number.isInteger(targetId)) return;
     send({ type: 'kick', targetId });
   });
+
+  kickedRefreshBtn.addEventListener('click', () => location.reload());
+
+  function showKickedModal(reason) {
+    kickedReasonEl.textContent = reason;
+    overlay.style.display = 'flex';
+    lobby.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    hud.classList.add('hidden');
+    kickedModal.classList.remove('hidden');
+  }
 
   // ----- Input -----
   // Track held direction keys as a stack so the most recently pressed
