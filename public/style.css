@@ -239,7 +239,8 @@ kbd {
   border-radius: 50%;
 }
 .hud-player.dead { opacity: 0.4; text-decoration: line-through; }
-.hud-player .wins { color: #ffd84d; font-weight: 600; font-size: 12px; }
+.hud-player .score { color: #ffd84d; font-weight: 600; font-size: 12px; }
+.hud-player .kills { color: #d97070; font-weight: 600; font-size: 12px; }
 
 .hud-stats {
   background: #232733;

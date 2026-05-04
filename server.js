@@ -149,7 +149,18 @@ function endGame(winnerId) {
   state.endTimer = 5; // 5s before back to lobby
   if (winnerId != null) {
     const winner = state.players.get(winnerId);
-    if (winner) winner.wins = (winner.wins || 0) + 1;
+    if (winner) winner.score += 2;
+    // Runner-up: among non-winners, whoever died most recently.
+    let runnerUp = null;
+    let latest = -1;
+    for (const p of state.players.values()) {
+      if (p.id === winnerId) continue;
+      if (p.deathTime != null && p.deathTime > latest) {
+        latest = p.deathTime;
+        runnerUp = p;
+      }
+    }
+    if (runnerUp) runnerUp.score += 1;
   }
 }
 
@@ -370,7 +381,7 @@ function explodeBomb(bomb, processedIds) {
     }
   }
 
-  state.explosions.push({ tiles, life: EXPLOSION_DURATION, lethal: EXPLOSION_LETHAL_DURATION });
+  state.explosions.push({ tiles, life: EXPLOSION_DURATION, lethal: EXPLOSION_LETHAL_DURATION, ownerId: bomb.ownerId });
 }
 
 // ----- Tick -----
@@ -420,6 +431,13 @@ function tick(dt) {
           if (ex.tiles.some(t => t.x === tx && t.y === ty)) {
             p.alive = false;
             p.deathTime = Date.now();
+            if (ex.ownerId != null && ex.ownerId !== p.id) {
+              const killer = state.players.get(ex.ownerId);
+              if (killer) {
+                killer.kills += 1;
+                killer.score += 1;
+              }
+            }
             if (state.map[ty][tx] === TILE_EMPTY) {
               state.map[ty][tx] = TILE_TOMBSTONE;
               state.tombstones.push({ x: tx, y: ty, color: p.color });
@@ -482,10 +500,11 @@ function snapshot() {
       range: p.range,
       speed: p.speed,
       canKick: !!p.canKick,
-      wins: p.wins || 0,
+      kills: p.kills || 0,
+      score: p.score || 0,
       ready: p.ready,
     })),
-    bombs: state.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, fuse: b.fuse })),
+    bombs: state.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, fuse: b.fuse, ownerId: b.ownerId })),
     explosions: state.explosions.map(e => ({ tiles: e.tiles, life: e.life })),
     powerups: state.powerups,
     tombstones: state.tombstones,
@@ -540,7 +559,9 @@ wss.on('connection', (ws) => {
         maxBombs: 1, bombsActive: 0,
         range: 2, speed: BASE_SPEED,
         canKick: false,
-        wins: 0, // accumulates across the session for as long as they stay connected
+        // Cumulative across the session for as long as they stay connected.
+        kills: 0,
+        score: 0,
       };
       state.players.set(id, player);
       if (becomingHost) state.hostId = id;

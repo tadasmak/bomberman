@@ -266,7 +266,8 @@
       div.innerHTML = `
         <span class="dot" style="background:${p.color}"></span>
         <span>${escapeHtml(p.name)}${isMe ? ' (you)' : ''}</span>
-        <span class="wins">🏆${p.wins || 0}</span>
+        <span class="score">🏆${p.score || 0}</span>
+        <span class="kills">💀${p.kills || 0}</span>
       `;
       winsHud.appendChild(div);
     }
@@ -344,9 +345,11 @@
       drawPowerup(pu.x * TILE, pu.y * TILE, pu.type);
     }
 
-    // Bombs
+    // Bombs (tinted with owner's color)
+    const playersById = new Map(s.players.map(p => [p.id, p]));
     for (const b of s.bombs) {
-      drawBomb(b.x * TILE, b.y * TILE, b.fuse);
+      const owner = playersById.get(b.ownerId);
+      drawBomb(b.x * TILE, b.y * TILE, b.fuse, owner ? owner.color : null);
     }
 
     // Players (sort by y so lower ones overlap)
@@ -420,7 +423,7 @@
     }
   }
 
-  function drawBomb(tx, ty, fuse) {
+  function drawBomb(tx, ty, fuse, color) {
     const cx = tx + TILE / 2;
     const cy = ty + TILE / 2;
     // pulsate
@@ -431,6 +434,14 @@
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
+    // owner color ring
+    if (color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     // highlight
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.beginPath();
