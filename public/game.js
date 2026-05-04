@@ -101,8 +101,10 @@
 
   lobbyList.addEventListener('click', (e) => {
     const btn = e.target.closest('.kick-btn');
+    console.log('[kick] lobbyList click', { target: e.target, btn });
     if (!btn) return;
     const targetId = Number(btn.dataset.kickId);
+    console.log('[kick] sending', { targetId, wsState: ws.readyState });
     if (!Number.isInteger(targetId)) return;
     send({ type: 'kick', targetId });
   });

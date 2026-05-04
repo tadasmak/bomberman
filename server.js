@@ -209,6 +209,15 @@ function tryKickBomb(p, nx, ny, dx, dy) {
   bomb.tileY = beyondY;
   bomb.moving = true;
   bomb.kickDir = { dx, dy };
+  // Kicking an enemy bomb steals it: kicker gets the kill credit (and the
+  // bomb takes their color), and the bomb-slot transfers too — original owner
+  // gets their slot back, kicker holds the bomb until it explodes.
+  if (bomb.ownerId !== p.id) {
+    const prev = state.players.get(bomb.ownerId);
+    if (prev) prev.bombsActive = Math.max(0, prev.bombsActive - 1);
+    bomb.ownerId = p.id;
+    p.bombsActive += 1;
+  }
 }
 
 function advanceBomb(bomb, dt) {
@@ -611,11 +620,12 @@ wss.on('connection', (ws) => {
       if (!p) return;
       p.name = String(msg.name || p.name).slice(0, 16);
     } else if (msg.type === 'kick') {
-      if (id !== state.hostId) return;
+      console.log('[kick] received', { from: id, hostId: state.hostId, targetId: msg.targetId });
+      if (id !== state.hostId) { console.log('[kick] rejected: not host'); return; }
       const targetId = Number(msg.targetId);
-      if (!Number.isInteger(targetId)) return;
-      if (targetId === state.hostId) return;
-      if (!state.players.has(targetId)) return;
+      if (!Number.isInteger(targetId)) { console.log('[kick] rejected: bad targetId'); return; }
+      if (targetId === state.hostId) { console.log('[kick] rejected: target is host'); return; }
+      if (!state.players.has(targetId)) { console.log('[kick] rejected: target not in players'); return; }
       // Remove immediately so the next broadcast (and the host's UI) reflects
       // the kick without waiting for the WS close handshake. The on('close')
       // handler's delete is idempotent.
